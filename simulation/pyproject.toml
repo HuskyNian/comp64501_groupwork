@@ -1,0 +1,28 @@
+[project]
+name = "IBMQ_env"
+version = "0.1.0"
+description = "A Colab-style Python environment"
+requires-python = ">=3.10"
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "scipy",
+    "scikit-learn",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "networkx",
+    "ipykernel",
+    "jupyterlab",
+    "qiskit-ibm-runtime",
+    "pylatexenc",
+    "qiskit",
+    "qiskit-aer",
+    "qutip"
+]
+
+[tool.uv]
+managed = true

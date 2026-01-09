@@ -114,7 +114,7 @@ class QuantumChannelAnalyzer:
         
         I.dims = [[2, 2, 2, 2], [2, 2, 2, 2]]
         
-        return I / 2
+        return I
     
     @staticmethod
     def link_product(superchannel, input_channel):

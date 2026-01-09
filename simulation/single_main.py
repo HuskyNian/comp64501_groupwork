@@ -1,4 +1,4 @@
-from ShallowPocketModel import QuantumChannelAnalyzer as q
+from SingleSlot import QuantumChannelAnalyzer as q
 import numpy as np
 
 def main():

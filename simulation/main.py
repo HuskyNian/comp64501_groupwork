@@ -5,13 +5,13 @@ def main():
     # Example usage
     
     # Create an analyzer instance
-    analyzer = q(g=0.8, r=0.3, t=5.0, T=5.0)
+    analyzer = q(g=(0.8, 0.8), r=0.3, t=5.0)
     
     # Create a shallow pocket model
     choi_superchannel = analyzer.create_shallow_pocket_model()
 
     # Create a parameterized unitary
-    V = analyzer.parameterised_unitary(np.pi, np.pi/7, np.pi)
+    V = analyzer.parameterised_unitary(np.pi, np.pi/7, np.pi) # [0,2pi]
     print("\nParameterized unitary:")
     print(analyzer.qobj_round(V, 2))
     
@@ -24,7 +24,7 @@ def main():
     choi_output = analyzer.link_product(choi_superchannel, choi_input)
     print("\nOutput channel:")
     print(analyzer.qobj_round(choi_output, 2))
-
+    
     # Find the closest unitary and the corresponding fidelity (target)
     U, F_U = analyzer.closest_unitary_channel(choi_output)
     print("\nClosest unitary U (rounded):")

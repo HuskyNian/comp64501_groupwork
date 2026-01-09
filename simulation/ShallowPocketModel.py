@@ -12,25 +12,22 @@ class QuantumChannelAnalyzer:
     - Working with parameterized unitaries
     """
     
-    def __init__(self, g=None, r=None, t=None, T=None):
+    def __init__(self, g=None, r=None, t=None):
         """
         Initialize the QuantumChannelAnalyzer.
         
         Parameters
         ----------
-        g : float, optional
-            Coupling strength between system and environment
+        g : tuple[float, float] or list[float, float]
+            (g1, g2) coupling strengths for history and future segments
         r : float, optional
             Lorentzian width parameter (> 0)
         t : float, optional
-            Evolution time for the "history" segment
-        T : float, optional
-            Evolution time for the "future" segment
+            Evolution time for both segments
         """
-        self.g = g
-        self.r = r
         self.t = t
-        self.T = T
+        self.r = r
+        self.g1, self.g2 = g
     
     @staticmethod
     def qobj_round(qobj, digits=2):
@@ -52,20 +49,19 @@ class QuantumChannelAnalyzer:
         data = np.round(qobj.full(), digits)
         return Qobj(data, dims=qobj.dims)
     
-    def create_shallow_pocket_model(self, g=None, r=None, t=None, T=None):
+    def create_shallow_pocket_model(self, g=None, r=None, t=None):
         """
         Construct the Choi state of the superchannel for the shallow-pocket model.
         
         Parameters
         ----------
-        g : float, optional
-            Coupling strength (uses instance value if not provided)
+        g : tuple[float, float] or list[float, float], optional
+            (g1, g2) coupling strengths for history and future segments
+            (uses instance values if not provided)
         r : float, optional
             Lorentzian width parameter (uses instance value if not provided)
         t : float, optional
-            History evolution time (uses instance value if not provided)
-        T : float, optional
-            Future evolution time (uses instance value if not provided)
+            Evolution time (uses instance value if not provided)
             
         Returns
         -------
@@ -73,13 +69,15 @@ class QuantumChannelAnalyzer:
             Choi state representing the superchannel
         """
         # Use provided parameters or fall back to instance attributes
-        g = g if g is not None else self.g
-        r = r if r is not None else self.r
         t = t if t is not None else self.t
-        T = T if T is not None else self.T
-        
-        if any(param is None for param in [g, r, t, T]):
-            raise ValueError("All parameters (g, r, t, T) must be provided")
+        r = r if r is not None else self.r
+        g1, g2 = (self.g1, self.g2) if g is None else g
+
+        # Validate required params AFTER fallback
+        if any(x is None for x in (g1, g2, r, t)):
+            raise ValueError("Need g=(g1,g2), r, t (either via init or arguments).")
+        if r <= 0:
+            raise ValueError("r must be > 0.")
         
         # Define basis states for 4-qubit system
         ket_0000 = basis(16, 0)   # |0000⟩
@@ -88,30 +86,30 @@ class QuantumChannelAnalyzer:
         ket_1111 = basis(16, 15)  # |1111⟩
         
         # Calculate exponential terms
-        exp_neg_grt = np.exp(-g * r * t)
-        exp_neg_grT = np.exp(-g * r * T)
-        exp_neg_grtplusT = np.exp(-g * r * (t + T))
-        exp_neg_grtminusT = np.exp(-g * r * np.abs(t - T))
+        exp_neg_trg1 = np.exp(-t * r * g1)
+        exp_neg_trg2 = np.exp(-t * r * g2)
+        exp_neg_trg1plusg2 = np.exp(-t * r * (g1 + g2))
+        exp_neg_trg1minusg2 = np.exp(-t * r * np.abs(g1 - g2))
         
         # Build operator using QuTiP's ket-bra notation
         I = (ket_0000 * ket_0000.dag() + 
-             exp_neg_grT * ket_0011 * ket_0000.dag() + 
-             exp_neg_grt * ket_1100 * ket_0000.dag() + 
-             exp_neg_grtplusT * ket_1111 * ket_0000.dag() +
+             exp_neg_trg2 * ket_0011 * ket_0000.dag() + 
+             exp_neg_trg1 * ket_1100 * ket_0000.dag() + 
+             exp_neg_trg1plusg2 * ket_1111 * ket_0000.dag() +
              
-             exp_neg_grT * ket_0000 * ket_0011.dag() + 
+             exp_neg_trg2 * ket_0000 * ket_0011.dag() + 
              ket_0011 * ket_0011.dag() + 
-             exp_neg_grtminusT * ket_1100 * ket_0011.dag() + 
-             exp_neg_grt * ket_1111 * ket_0011.dag() +
+             exp_neg_trg1minusg2 * ket_1100 * ket_0011.dag() + 
+             exp_neg_trg1 * ket_1111 * ket_0011.dag() +
              
-             exp_neg_grt * ket_0000 * ket_1100.dag() + 
-             exp_neg_grtminusT * ket_0011 * ket_1100.dag() + 
+             exp_neg_trg1 * ket_0000 * ket_1100.dag() + 
+             exp_neg_trg1minusg2 * ket_0011 * ket_1100.dag() + 
              ket_1100 * ket_1100.dag() + 
-             exp_neg_grT * ket_1111 * ket_1100.dag() +
+             exp_neg_trg2 * ket_1111 * ket_1100.dag() +
              
-             exp_neg_grtplusT * ket_0000 * ket_1111.dag() + 
-             exp_neg_grt * ket_0011 * ket_1111.dag() + 
-             exp_neg_grT * ket_1100 * ket_1111.dag() + 
+             exp_neg_trg1plusg2 * ket_0000 * ket_1111.dag() + 
+             exp_neg_trg1 * ket_0011 * ket_1111.dag() + 
+             exp_neg_trg2 * ket_1100 * ket_1111.dag() + 
              ket_1111 * ket_1111.dag())
         
         I.dims = [[2, 2, 2, 2], [2, 2, 2, 2]]
